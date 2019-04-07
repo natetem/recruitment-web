@@ -25,7 +25,7 @@ public interface Library {
      * @see fr.d2factory.libraryapp.book.ISBN
      * @see Member
      */
-    Book borrowBook(long isbnCode, Member member, LocalDate borrowedAt) throws HasLateBooksException;
+    public Book borrowBook(long isbnCode, Member member, LocalDate borrowedAt) throws HasLateBooksException;
 
     /**
      * A member returns a book to the library.
@@ -36,5 +36,5 @@ public interface Library {
      *
      * @see Member#payBook(int)
      */
-    void returnBook(Book book, Member member);
+    public void returnBook(Book book, Member member);
 }
