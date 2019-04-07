@@ -1,14 +1,13 @@
 package fr.d2factory.libraryapp.member;
 
-import fr.d2factory.libraryapp.library.HasLateBooksException;
-
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 public class Student extends Member {
 
     private LocalDate dateOfRegistration;
     private final static int FIRST_YEAR_FREE_DAYS = 15;
-    private final static int NORMAL_PERIOD = 30;
+    private static int normalPeriod = 30;
     private final static float NORMAL_PRICE = 0.10f;
     private final static float LATE_PRICE = 0.15f;
 
@@ -16,15 +15,12 @@ public class Student extends Member {
     public void payBook(int numberOfDays) {
         float money;
         numberOfDays = realNumberOfDay(numberOfDays);
-        if (numberOfDays <= NORMAL_PERIOD) {
-            money = numberOfDays * NORMAL_PRICE;
-            this.setWallet(this.getWallet() - money);
+        if (this.hasLateBook(numberOfDays)) {
+            money = (numberOfDays - normalPeriod) * LATE_PRICE + normalPeriod * NORMAL_PRICE;
         } else {
-            money = (numberOfDays - NORMAL_PERIOD) * LATE_PRICE + NORMAL_PERIOD * numberOfDays;
-            this.setWallet(this.getWallet() - money);
-            throw new HasLateBooksException("your are late");
+            money = numberOfDays * NORMAL_PRICE;
         }
-
+        this.setWallet(this.getWallet() - money);
     }
 
     private int realNumberOfDay(int numberOfDays) {
@@ -38,9 +34,8 @@ public class Student extends Member {
         return numberOfDays;
     }
 
-
     public boolean isFirstYear() {
-        return this.dateOfRegistration.getYear() == LocalDate.now().getYear();
+        return ChronoUnit.YEARS.between(this.dateOfRegistration, LocalDate.now()) < 1;
     }
 
     public LocalDate getDateOfRegistration() {
@@ -50,4 +45,10 @@ public class Student extends Member {
     public void setDateOfRegistration(LocalDate dateOfRegistration) {
         this.dateOfRegistration = dateOfRegistration;
     }
+
+    @Override
+    public boolean hasLateBook(int numberOfDays) {
+        return numberOfDays > normalPeriod;
+    }
+
 }

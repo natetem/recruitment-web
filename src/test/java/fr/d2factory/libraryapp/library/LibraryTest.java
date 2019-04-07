@@ -1,44 +1,40 @@
 package fr.d2factory.libraryapp.library;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.d2factory.libraryapp.book.Book;
 import fr.d2factory.libraryapp.book.BookRepository;
 import fr.d2factory.libraryapp.book.ISBN;
-import fr.d2factory.libraryapp.member.Member;
+import fr.d2factory.libraryapp.member.MemberRepository;
 import fr.d2factory.libraryapp.member.Resident;
 import fr.d2factory.libraryapp.member.Student;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+
 
 public class LibraryTest {
-    private Library library;
-    private BookRepository bookRepository;
+    private  Library library;
+    private  BookRepository bookRepository;
+    private  MemberRepository memberRepository;
 
-    @Before
-    public void setup() throws IOException {
-        //TODO instantiate the library and the repository
+    @BeforeEach
+    public  void setup() throws IOException {
+
         bookRepository = new BookRepository();
-        library = new LibraryImpl(bookRepository);
+        memberRepository=new MemberRepository();
+        library = new LibraryImpl(bookRepository,memberRepository);
 
-        //TODO add some test books (use BookRepository#addBooks)
-        //TODO to help you a file called books.json is available in src/test/resources
         ObjectMapper mapper = new ObjectMapper();
-
         JsonNode root = mapper.readTree(new File("src/test/resources/books.json"));
         List<Book> books = new ArrayList<>();
         for (JsonNode node : root) {
@@ -47,10 +43,8 @@ public class LibraryTest {
             Long isbnCode = node.path("isbn").path("isbnCode").asLong();
             Book book = new Book(title, author, new ISBN(isbnCode));
             books.add(book);
-
         }
         bookRepository.addBooks(books);
-
     }
 
     @Test
@@ -70,8 +64,8 @@ public class LibraryTest {
         Book book1 = library.borrowBook(46578964513L, student, LocalDate.of(2019, 4, 5));
         Resident resident = new Resident();
         resident.setWallet(150);
-        Book book2 = library.borrowBook(46578964513L, resident, LocalDate.of(2019, 4, 5));
-        assertNull(book2);
+        NotAvailableBookException thrown = assertThrows(NotAvailableBookException.class, () ->library.borrowBook(46578964513L, resident, LocalDate.of(2019, 4, 5)));
+        assertTrue(thrown.getMessage().contains("not available"));
     }
 
     @Test
@@ -80,7 +74,7 @@ public class LibraryTest {
         resident.setWallet(150);
         LocalDate borrowedAt=LocalDate.of(2019, 4, 5);
         Book book = library.borrowBook(46578964513L, resident, borrowedAt);
-        int days= Period.between(borrowedAt,LocalDate.now()).getDays();
+        long days= ChronoUnit.DAYS.between(borrowedAt,LocalDate.now());
         library.returnBook(book,resident);
         Float result=150-days*0.10f;
         assertEquals(resident.getWallet(),result,0);
@@ -103,19 +97,20 @@ public class LibraryTest {
     @Test
     public void students_in_1st_year_are_not_taxed_for_the_first_15days() {
         Student student = new Student();
-        student.setWallet(120);
+        student.setWallet(10);
         student.setDateOfRegistration(LocalDate.of(2018, 9, 1));
         LocalDate borrowedAt=LocalDate.of(2019, 4, 5);
         Book book = library.borrowBook(46578964513L, student, borrowedAt);
-        int days= Period.between(borrowedAt,LocalDate.now()).getDays();
+        int days= (int)ChronoUnit.DAYS.between(borrowedAt,LocalDate.now());
         library.returnBook(book,student);
         int realDays=days-15;
         Float result;
         if(realDays>0) {
-            result = 120 -  realDays* 0.10f;
+            result = 10 -  realDays* 0.10f;
         }else{
-            result = 120f;
+            result = 10f;
         }
+        System.out.println("student"+realDays);
         assertEquals(student.getWallet(),result,0);
     }
 
@@ -124,11 +119,13 @@ public class LibraryTest {
         Student student = new Student();
         student.setWallet(100);
         student.setDateOfRegistration(LocalDate.of(2017, 9, 1));
-        LocalDate borrowedAt=LocalDate.of(2019, 3, 5);
+        LocalDate borrowedAt=LocalDate.of(2019, 2, 5);
         Book book = library.borrowBook(46578964513L, student, borrowedAt);
-        int days= Period.between(borrowedAt,LocalDate.now()).getDays();
+        long days= ChronoUnit.DAYS.between(borrowedAt,LocalDate.now());
         library.returnBook(book,student);
-        Float result = 100 -  30* 0.10f-(days-30)*0.15f;
+        Float result = 100 -  ((30* 0.10f)+(days-30)*0.15f);
+        System.out.println(days);
+        System.out.println(student.getWallet());
         assertEquals(student.getWallet(),result,0);
     }
 
@@ -138,14 +135,20 @@ public class LibraryTest {
         resident.setWallet(100);
         LocalDate borrowedAt=LocalDate.of(2019, 2, 5);
         Book book = library.borrowBook(46578964513L, resident, borrowedAt);
-        int days= Period.between(borrowedAt,LocalDate.now()).getDays();
+        long days= ChronoUnit.DAYS.between(borrowedAt,LocalDate.now());
         library.returnBook(book,resident);
         Float result = 100 -  60* 0.10f-(days-60)*0.20f;
         assertEquals(resident.getWallet(),result,0);
+
     }
 
     @Test
     public void members_cannot_borrow_book_if_they_have_late_books() {
-        fail("Implement me");
+        Resident resident = new Resident();
+        resident.setWallet(100);
+        LocalDate borrowedAt=LocalDate.of(2019, 2, 5);
+        Book book = library.borrowBook(46578964513L, resident, borrowedAt);
+        HasLateBooksException thrown = assertThrows(HasLateBooksException.class, () ->library.borrowBook(3326456467846L, resident, LocalDate.of(2019, 4, 5)));
+        assertTrue(thrown.getMessage().contains("you are late"));
     }
 }

@@ -5,7 +5,7 @@ package fr.d2factory.libraryapp.library;
  */
 public class HasLateBooksException extends RuntimeException {
 
-    public HasLateBooksException(String message){
+    public HasLateBooksException(String message) {
         super(message);
     }
 }

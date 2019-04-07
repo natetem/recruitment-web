@@ -12,12 +12,15 @@ public abstract class Member {
      */
     private float wallet;
 
+
     /**
      * The member should pay their books when they are returned to the library
      *
      * @param numberOfDays the number of days they kept the book
      */
     public abstract void payBook(int numberOfDays);
+
+    public abstract boolean hasLateBook(int numberOfDays);
 
     public float getWallet() {
         return wallet;
@@ -26,4 +29,6 @@ public abstract class Member {
     public void setWallet(float wallet) {
         this.wallet = wallet;
     }
+
 }
+
